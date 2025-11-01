@@ -1,0 +1,217 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Store</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        input, button {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+            button:hover {
+                background-color: #0056b3;
+            }
+
+        .list {
+            margin-top: 20px;
+        }
+
+        .item {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .delete-btn {
+            background-color: #dc3545;
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+
+            .delete-btn:hover {
+                background-color: #c82333;
+            }
+    </style>
+</head>
+<body>
+    <h1>🎬 Video Store</h1>
+
+    <!-- CUSTOMERS SECTION -->
+    <div class="section">
+        <h2>Customers</h2>
+        <div>
+            <input type="text" id="customerName" placeholder="Name" />
+            <input type="email" id="customerEmail" placeholder="Email" />
+            <button onclick="addCustomer()">Add Customer</button>
+            <button onclick="loadCustomers()">Refresh</button>
+        </div>
+        <div id="customerList" class="list"></div>
+    </div>
+
+    <!-- VIDEOS SECTION -->
+    <div class="section">
+        <h2>Videos</h2>
+        <div>
+            <input type="text" id="videoTitle" placeholder="Title" />
+            <input type="number" id="videoYear" placeholder="Year" />
+            <input type="text" id="videoGenres" placeholder="Genres (comma-separated)" />
+            <button onclick="addVideo()">Add Video</button>
+            <button onclick="loadVideos()">Refresh</button>
+        </div>
+        <div id="videoList" class="list"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5167/api';  // ⚠️ Change port if different
+
+        // CUSTOMERS
+        async function addCustomer() {
+            const name = document.getElementById('customerName').value;
+            const email = document.getElementById('customerEmail').value;
+
+            if (!name || !email) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            const response = await fetch(`${API_URL}/customers`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email })
+            });
+
+            if (response.ok) {
+                document.getElementById('customerName').value = '';
+                document.getElementById('customerEmail').value = '';
+                loadCustomers();
+            } else {
+                alert('Error adding customer');
+            }
+        }
+
+        async function loadCustomers() {
+            const response = await fetch(`${API_URL}/customers`);
+            const customers = await response.json();
+
+            const listDiv = document.getElementById('customerList');
+            listDiv.innerHTML = customers.map(c => `
+                    <div class="item">
+                        <span><strong>${c.name}</strong> - ${c.email}</span>
+                        <button class="delete-btn" onclick="deleteCustomer('${c.id}')">Delete</button>
+                    </div>
+                `).join('');
+        }
+
+        async function deleteCustomer(id) {
+            if (!confirm('Delete this customer?')) return;
+
+            const response = await fetch(`${API_URL}/customers/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                loadCustomers();
+            } else {
+                alert('Error deleting customer');
+            }
+        }
+
+        // VIDEOS
+        async function addVideo() {
+            const title = document.getElementById('videoTitle').value;
+            const yearOfRelease = parseInt(document.getElementById('videoYear').value);
+            const genresInput = document.getElementById('videoGenres').value;
+            const genres = genresInput.split(',').map(g => g.trim()).filter(g => g);
+
+            if (!title || !yearOfRelease) {
+                alert('Please fill in title and year');
+                return;
+            }
+
+            const response = await fetch(`${API_URL}/videos`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, yearOfRelease, genres })
+            });
+
+            if (response.ok) {
+                document.getElementById('videoTitle').value = '';
+                document.getElementById('videoYear').value = '';
+                document.getElementById('videoGenres').value = '';
+                loadVideos();
+            } else {
+                alert('Error adding video');
+            }
+        }
+
+        async function loadVideos() {
+            const response = await fetch(`${API_URL}/videos`);
+            const videos = await response.json();
+
+            const listDiv = document.getElementById('videoList');
+            listDiv.innerHTML = videos.map(v => `
+                    <div class="item">
+                        <span>
+                            <strong>${v.title}</strong> (${v.yearOfRelease})
+                            ${v.genres.length > 0 ? `- ${v.genres.join(', ')}` : ''}
+                        </span>
+                        <button class="delete-btn" onclick="deleteVideo('${v.id}')">Delete</button>
+                    </div>
+                `).join('');
+        }
+
+        async function deleteVideo(id) {
+            if (!confirm('Delete this video?')) return;
+
+            const response = await fetch(`${API_URL}/videos/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                loadVideos();
+            } else {
+                alert('Error deleting video');
+            }
+        }
+
+        // Load data on page load
+        loadCustomers();
+        loadVideos();
+    </script>
+</body>
+</html>

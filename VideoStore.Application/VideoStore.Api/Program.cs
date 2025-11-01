@@ -8,8 +8,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Add your repository
-builder.Services.AddSingleton<ICustomerRepository, CustomerRepository>();
-builder.Services.AddSingleton<IVideoRepository, VideoRepository>();
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddSingleton<ICustomerRepository>(sp => new CustomerRepository(connectionString));
+builder.Services.AddSingleton<IVideoRepository>(sp => new VideoRepository(connectionString));
 
 // Add CORS
 builder.Services.AddCors(options =>

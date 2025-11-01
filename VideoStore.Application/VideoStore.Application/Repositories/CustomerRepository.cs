@@ -1,44 +1,75 @@
-﻿using VideoStore.Application.Models;
+﻿using Dapper;
+using Npgsql;
+using VideoStore.Application.Models;
 
 namespace VideoStore.Application.Repositories;
 
 public class CustomerRepository : ICustomerRepository
 {
-    private readonly List<Customer> _customers = new();
+    private readonly string _connectionString;
+
+    public CustomerRepository(string connectionString)
+    {
+        _connectionString = connectionString;
+    }
 
     public void AddCustomer(Customer customer)
     {
-        _customers.Add(customer);
+        
+        using var connection = new NpgsqlConnection(_connectionString);
+
+        var sql = @"
+            INSERT INTO customers (id, name, email)
+            VALUES (@Id, @Name, @Email)";
+
+        connection.Execute(sql, customer);
     }
-    public List<Customer> GetAllCustomers() 
+
+    public List<Customer> GetAllCustomers()
     {
-        return _customers;
+        using var connection = new NpgsqlConnection(_connectionString);
+
+        var sql = "SELECT id, name, email FROM customers";
+
+        return connection.Query<Customer>(sql).ToList();
     }
 
     public Customer GetCustomer(Guid id)
     {
-        return _customers.SingleOrDefault(c => c.Id == id);
+        using var connection = new NpgsqlConnection(_connectionString);
+
+        var sql = "SELECT id, name, email FROM customers WHERE id = @Id";
+
+        return connection.QuerySingleOrDefault<Customer>(sql, new { Id = id });
     }
 
     public bool DeleteCustomer(Guid id)
     {
-        var removedCount = _customers.RemoveAll(x => x.Id == id);
-        return removedCount > 0;  // true if deleted, false if not found
+        using var connection = new NpgsqlConnection(_connectionString);
+
+        var sql = "DELETE FROM customers WHERE id = @Id";
+
+        var rowsAffected = connection.Execute(sql, new { Id = id });
+
+        return rowsAffected > 0;
     }
 
     public bool UpdateCustomer(Guid id, Customer updatedCustomer)
     {
-        var existingCustomer = _customers.FirstOrDefault(c => c.Id == id);
+        using var connection = new NpgsqlConnection(_connectionString);
 
-        if (existingCustomer == null)
+        var sql = @"
+            UPDATE customers
+            SET name = @Name, email = @Email
+            WHERE id = @Id";
+
+        var rowsAffected = connection.Execute(sql, new
         {
-            return false;  // Customer not found
-        }
+            Id = id,
+            updatedCustomer.Name,
+            updatedCustomer.Email
+        });
 
-        // Update the properties
-        existingCustomer.Name = updatedCustomer.Name;
-        existingCustomer.Email = updatedCustomer.Email;
-
-        return true;
+        return rowsAffected > 0;
     }
 }
