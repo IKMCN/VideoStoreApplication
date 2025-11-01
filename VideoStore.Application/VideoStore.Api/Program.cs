@@ -11,6 +11,7 @@ builder.Services.AddSwaggerGen();
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddSingleton<ICustomerRepository>(sp => new CustomerRepository(connectionString));
 builder.Services.AddSingleton<IVideoRepository>(sp => new VideoRepository(connectionString));
+builder.Services.AddSingleton<IRentalRepository>(sp => new RentalRepository(connectionString));
 
 // Add CORS
 builder.Services.AddCors(options =>

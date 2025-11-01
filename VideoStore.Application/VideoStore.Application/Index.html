@@ -25,11 +25,15 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        input, button {
+        input, select, button {
             padding: 10px;
             margin: 5px;
             border-radius: 4px;
             border: 1px solid #ddd;
+        }
+
+        select {
+            min-width: 200px;
         }
 
         button {
@@ -61,10 +65,54 @@
             background-color: #dc3545;
             padding: 5px 10px;
             font-size: 12px;
+            margin-left: 5px;
         }
 
             .delete-btn:hover {
                 background-color: #c82333;
+            }
+
+        .return-btn {
+            background-color: #28a745;
+            padding: 5px 10px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+
+            .return-btn:hover {
+                background-color: #218838;
+            }
+
+        .rented {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+
+        .overdue {
+            background-color: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+
+        .returned {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+
+        .status {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 3px;
+            margin-left: 10px;
+        }
+
+            .status.available {
+                background-color: #d4edda;
+                color: #155724;
+            }
+
+            .status.rented {
+                background-color: #fff3cd;
+                color: #856404;
             }
     </style>
 </head>
@@ -96,8 +144,28 @@
         <div id="videoList" class="list"></div>
     </div>
 
+    <!-- RENTALS SECTION -->
+    <div class="section">
+        <h2>Rentals</h2>
+        <div>
+            <select id="rentalCustomer">
+                <option value="">Select Customer</option>
+            </select>
+            <select id="rentalVideo">
+                <option value="">Select Video</option>
+            </select>
+            <button onclick="rentVideo()">Rent Video</button>
+            <button onclick="loadRentals()">Refresh</button>
+        </div>
+        <div id="rentalList" class="list"></div>
+    </div>
+
     <script>
-        const API_URL = 'http://localhost:5167/api';  // ⚠️ Change port if different
+        const API_URL = 'http://localhost:5167/api';
+
+        let customers = [];
+        let videos = [];
+        let rentals = [];
 
         // CUSTOMERS
         async function addCustomer() {
@@ -126,15 +194,24 @@
 
         async function loadCustomers() {
             const response = await fetch(`${API_URL}/customers`);
-            const customers = await response.json();
+            customers = await response.json();
 
+            // Update customer list
             const listDiv = document.getElementById('customerList');
             listDiv.innerHTML = customers.map(c => `
-                    <div class="item">
-                        <span><strong>${c.name}</strong> - ${c.email}</span>
-                        <button class="delete-btn" onclick="deleteCustomer('${c.id}')">Delete</button>
-                    </div>
-                `).join('');
+                        <div class="item">
+                            <span><strong>${c.name}</strong> - ${c.email}</span>
+                            <div>
+                                <button onclick="viewCustomerRentals('${c.id}')">View Rentals</button>
+                                <button class="delete-btn" onclick="deleteCustomer('${c.id}')">Delete</button>
+                            </div>
+                        </div>
+                    `).join('');
+
+            // Update rental dropdown
+            const selectEl = document.getElementById('rentalCustomer');
+            selectEl.innerHTML = '<option value="">Select Customer</option>' +
+                customers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
         }
 
         async function deleteCustomer(id) {
@@ -148,6 +225,25 @@
                 loadCustomers();
             } else {
                 alert('Error deleting customer');
+            }
+        }
+
+        async function viewCustomerRentals(customerId) {
+            const response = await fetch(`${API_URL}/rentals/customer/${customerId}`);
+            const customerRentals = await response.json();
+
+            const customer = customers.find(c => c.id === customerId);
+
+            if (customerRentals.length === 0) {
+                alert(`${customer.name} has no active rentals`);
+            } else {
+                const rentalInfo = customerRentals.map(r => {
+                    const video = videos.find(v => v.id === r.videoId);
+                    const dueDate = new Date(r.dueDate).toLocaleDateString();
+                    return `• ${video?.title || 'Unknown'} (Due: ${dueDate})`;
+                }).join('\n');
+
+                alert(`${customer.name}'s Active Rentals:\n\n${rentalInfo}`);
             }
         }
 
@@ -181,18 +277,39 @@
 
         async function loadVideos() {
             const response = await fetch(`${API_URL}/videos`);
-            const videos = await response.json();
+            videos = await response.json();
+
+            // Get all rentals to check availability
+            const rentalsResponse = await fetch(`${API_URL}/rentals`);
+            rentals = await rentalsResponse.json();
 
             const listDiv = document.getElementById('videoList');
-            listDiv.innerHTML = videos.map(v => `
-                    <div class="item">
-                        <span>
-                            <strong>${v.title}</strong> (${v.yearOfRelease})
-                            ${v.genres.length > 0 ? `- ${v.genres.join(', ')}` : ''}
-                        </span>
-                        <button class="delete-btn" onclick="deleteVideo('${v.id}')">Delete</button>
-                    </div>
-                `).join('');
+            listDiv.innerHTML = videos.map(v => {
+                const activeRental = rentals.find(r => r.videoId === v.id && r.returnedAt === null);
+                const isRented = !!activeRental;
+
+                return `
+                            <div class="item">
+                                <span>
+                                    <strong>${v.title}</strong> (${v.yearOfRelease})
+                                    ${v.genres.length > 0 ? `- ${v.genres.join(', ')}` : ''}
+                                    <span class="status ${isRented ? 'rented' : 'available'}">
+                                        ${isRented ? 'Rented Out' : 'Available'}
+                                    </span>
+                                </span>
+                                <button class="delete-btn" onclick="deleteVideo('${v.id}')">Delete</button>
+                            </div>
+                        `;
+            }).join('');
+
+            // Update rental dropdown - only show available videos
+            const selectEl = document.getElementById('rentalVideo');
+            const availableVideos = videos.filter(v => {
+                return !rentals.find(r => r.videoId === v.id && r.returnedAt === null);
+            });
+
+            selectEl.innerHTML = '<option value="">Select Video</option>' +
+                availableVideos.map(v => `<option value="${v.id}">${v.title}</option>`).join('');
         }
 
         async function deleteVideo(id) {
@@ -209,9 +326,116 @@
             }
         }
 
-        // Load data on page load
-        loadCustomers();
-        loadVideos();
+        // RENTALS
+        async function rentVideo() {
+            const customerId = document.getElementById('rentalCustomer').value;
+            const videoId = document.getElementById('rentalVideo').value;
+
+            if (!customerId || !videoId) {
+                alert('Please select both customer and video');
+                return;
+            }
+
+            const response = await fetch(`${API_URL}/rentals`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ customerId, videoId })
+            });
+
+            if (response.ok) {
+                document.getElementById('rentalCustomer').value = '';
+                document.getElementById('rentalVideo').value = '';
+                loadRentals();
+                loadVideos(); // Refresh to update availability
+            } else {
+                const error = await response.json();
+                alert(error.message || 'Error renting video');
+            }
+        }
+
+        async function loadRentals() {
+            const response = await fetch(`${API_URL}/rentals`);
+            rentals = await response.json();
+
+            const listDiv = document.getElementById('rentalList');
+
+            if (rentals.length === 0) {
+                listDiv.innerHTML = '<p>No rentals yet</p>';
+                return;
+            }
+
+            listDiv.innerHTML = rentals.map(r => {
+                const customer = customers.find(c => c.id === r.customerId);
+                const video = videos.find(v => v.id === r.videoId);
+                const rentedDate = new Date(r.rentedAt).toLocaleDateString();
+                const dueDate = new Date(r.dueDate).toLocaleDateString();
+                const isReturned = r.returnedAt !== null;
+                const isOverdue = !isReturned && new Date(r.dueDate) < new Date();
+
+                let statusClass = isReturned ? 'returned' : (isOverdue ? 'overdue' : 'rented');
+                let statusText = isReturned ? 'Returned' : (isOverdue ? 'OVERDUE' : 'Active');
+
+                return `
+                            <div class="item ${statusClass}">
+                                <span>
+                                    <strong>${customer?.name || 'Unknown'}</strong> rented
+                                    <strong>${video?.title || 'Unknown'}</strong>
+                                    <br>
+                                    <small>Rented: ${rentedDate} | Due: ${dueDate} | Status: ${statusText}</small>
+                                    ${r.lateFee > 0 ? `<br><small>Late Fee: $${r.lateFee.toFixed(2)}</small>` : ''}
+                                </span>
+                                <div>
+                                    ${!isReturned ? `<button class="return-btn" onclick="returnVideo('${r.id}')">Return</button>` : ''}
+                                    <button class="delete-btn" onclick="deleteRental('${r.id}')">Delete</button>
+                                </div>
+                            </div>
+                        `;
+            }).join('');
+        }
+
+        async function returnVideo(rentalId) {
+            const lateFeeInput = prompt('Enter late fee (0 if not late):');
+            if (lateFeeInput === null) return; // Cancelled
+
+            const lateFee = parseFloat(lateFeeInput) || 0;
+
+            const response = await fetch(`${API_URL}/rentals/${rentalId}/return`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lateFee })
+            });
+
+            if (response.ok) {
+                loadRentals();
+                loadVideos(); // Refresh to update availability
+            } else {
+                alert('Error returning video');
+            }
+        }
+
+        async function deleteRental(id) {
+            if (!confirm('Delete this rental record?')) return;
+
+            const response = await fetch(`${API_URL}/rentals/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                loadRentals();
+                loadVideos(); // Refresh to update availability
+            } else {
+                alert('Error deleting rental');
+            }
+        }
+
+        // Load all data on page load
+        async function initializePage() {
+            await loadCustomers();
+            await loadVideos();
+            await loadRentals();
+        }
+
+        initializePage();
     </script>
 </body>
 </html>
