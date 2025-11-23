@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using VideoStore.Application.Models;
 using VideoStore.Application.Repositories;
 using VideoStore.Application.Services;
@@ -10,16 +10,11 @@ namespace VideoStore.Api.Controllers;
 public class RentalsController : ControllerBase
 {
     private readonly IRentalRepository _rentalRepository;
-    private readonly ICustomerRepository _customerRepository;
     private readonly IBankingApiService _bankingApiService;
 
-    public RentalsController(
-        IRentalRepository rentalRepository,
-        ICustomerRepository customerRepository,
-        IBankingApiService bankingApiService)
+    public RentalsController(IRentalRepository rentalRepository, IBankingApiService bankingApiService)
     {
         _rentalRepository = rentalRepository;
-        _customerRepository = customerRepository;
         _bankingApiService = bankingApiService;
     }
 
@@ -32,13 +27,6 @@ public class RentalsController : ControllerBase
         if (existingRental != null)
         {
             return BadRequest(new { message = "Video is already rented out" });
-        }
-
-        // Get customer's bank account number
-        var customer = _customerRepository.GetCustomer(rental.CustomerId);
-        if (customer != null)
-        {
-            rental.BankAccountNumber = customer.BankAccountNumber;
         }
 
         _rentalRepository.RentVideo(rental);
@@ -112,8 +100,8 @@ public class RentalsController : ControllerBase
         // Optional: Verify transaction amount matches rental amount
         if (Math.Abs(transaction.Amount - rental.RentalAmount) > 0.01m)
         {
-            return BadRequest(new
-            {
+            return BadRequest(new 
+            { 
                 message = "Transaction amount does not match rental amount",
                 expected = rental.RentalAmount,
                 actual = transaction.Amount
@@ -127,57 +115,12 @@ public class RentalsController : ControllerBase
             return BadRequest(new { message = "Failed to confirm payment" });
         }
 
-        return Ok(new
-        {
+        return Ok(new 
+        { 
             message = "Payment confirmed successfully",
             rentalId = id,
             transactionId = request.TransactionId
         });
-    }
-
-    // NEW: GET /api/rentals/{id}/check-payment - Auto-check for payment
-    [HttpGet("{id}/check-payment")]
-    public async Task<IActionResult> CheckPayment(Guid id)
-    {
-        var rental = _rentalRepository.GetRental(id);
-        if (rental == null)
-        {
-            return NotFound(new { message = "Rental not found" });
-        }
-
-        // If already paid, return success
-        if (rental.PaymentStatus == PaymentStatus.Paid)
-        {
-            return Ok(new { isPaid = true, transactionId = rental.PaymentTransactionId });
-        }
-
-        // If no bank account linked, can't auto-check
-        if (string.IsNullOrEmpty(rental.BankAccountNumber))
-        {
-            return Ok(new { isPaid = false, message = "No bank account linked" });
-        }
-
-        // Check Banking API for matching transaction
-        // Look for transactions since rental was created
-        var transactionFound = await _bankingApiService.FindMatchingTransactionAsync(
-            rental.BankAccountNumber,
-            rental.RentalAmount,
-            rental.RentedAt);
-
-        if (transactionFound != null)
-        {
-            // Auto-confirm the payment
-            _rentalRepository.ConfirmPayment(id, transactionFound.Id);
-
-            return Ok(new
-            {
-                isPaid = true,
-                transactionId = transactionFound.Id,
-                autoConfirmed = true
-            });
-        }
-
-        return Ok(new { isPaid = false });
     }
 
     // DELETE /api/rentals/{id} - Delete a rental

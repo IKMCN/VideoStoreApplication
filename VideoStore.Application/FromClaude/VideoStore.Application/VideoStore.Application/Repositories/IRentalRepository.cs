@@ -1,4 +1,4 @@
-﻿using VideoStore.Application.Models;
+using VideoStore.Application.Models;
 
 namespace VideoStore.Application.Repositories
 {

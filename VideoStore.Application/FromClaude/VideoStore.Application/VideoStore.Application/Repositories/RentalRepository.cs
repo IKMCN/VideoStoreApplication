@@ -1,4 +1,5 @@
-﻿using Dapper;
+
+using Dapper;
 using Npgsql;
 using VideoStore.Application.Models;
 
@@ -22,8 +23,8 @@ public class RentalRepository : IRentalRepository
         using var connection = new NpgsqlConnection(_connectionString);
 
         var sql = @"
-            INSERT INTO rentals (id, customer_id, video_id, rented_at, due_date, returned_at, late_fee, payment_transaction_id, payment_status, rental_amount, bank_account_number)
-            VALUES (@Id, @CustomerId, @VideoId, @RentedAt, @DueDate, @ReturnedAt, @LateFee, @PaymentTransactionId, @PaymentStatus, @RentalAmount, @BankAccountNumber)";
+            INSERT INTO rentals (id, customer_id, video_id, rented_at, due_date, returned_at, late_fee, payment_transaction_id, payment_status, rental_amount)
+            VALUES (@Id, @CustomerId, @VideoId, @RentedAt, @DueDate, @ReturnedAt, @LateFee, @PaymentTransactionId, @PaymentStatus, @RentalAmount)";
 
         connection.Execute(sql, new
         {
@@ -36,8 +37,7 @@ public class RentalRepository : IRentalRepository
             rental.LateFee,
             rental.PaymentTransactionId,
             PaymentStatus = rental.PaymentStatus.ToString(),
-            rental.RentalAmount,
-            rental.BankAccountNumber
+            rental.RentalAmount
         });
     }
 
@@ -45,7 +45,7 @@ public class RentalRepository : IRentalRepository
     {
         using var connection = new NpgsqlConnection(_connectionString);
 
-        var sql = "SELECT id, customer_id, video_id, rented_at, due_date, returned_at, late_fee, payment_transaction_id, payment_status, rental_amount, bank_account_number FROM rentals";
+        var sql = "SELECT id, customer_id, video_id, rented_at, due_date, returned_at, late_fee, payment_transaction_id, payment_status, rental_amount FROM rentals";
 
         return connection.Query<Rental>(sql).ToList();
     }
@@ -54,7 +54,7 @@ public class RentalRepository : IRentalRepository
     {
         using var connection = new NpgsqlConnection(_connectionString);
 
-        var sql = "SELECT id, customer_id, video_id, rented_at, due_date, returned_at, late_fee, payment_transaction_id, payment_status, rental_amount, bank_account_number FROM rentals WHERE id = @Id";
+        var sql = "SELECT id, customer_id, video_id, rented_at, due_date, returned_at, late_fee, payment_transaction_id, payment_status, rental_amount FROM rentals WHERE id = @Id";
 
         return connection.QuerySingleOrDefault<Rental>(sql, new { Id = id });
     }
@@ -64,7 +64,7 @@ public class RentalRepository : IRentalRepository
         using var connection = new NpgsqlConnection(_connectionString);
 
         var sql = @"
-            SELECT id, customer_id, video_id, rented_at, due_date, returned_at, late_fee, payment_transaction_id, payment_status, rental_amount, bank_account_number 
+            SELECT id, customer_id, video_id, rented_at, due_date, returned_at, late_fee, payment_transaction_id, payment_status, rental_amount 
             FROM rentals 
             WHERE customer_id = @CustomerId 
             AND returned_at IS NULL";
@@ -77,7 +77,7 @@ public class RentalRepository : IRentalRepository
         using var connection = new NpgsqlConnection(_connectionString);
 
         var sql = @"
-            SELECT id, customer_id, video_id, rented_at, due_date, returned_at, late_fee, payment_transaction_id, payment_status, rental_amount, bank_account_number 
+            SELECT id, customer_id, video_id, rented_at, due_date, returned_at, late_fee, payment_transaction_id, payment_status, rental_amount 
             FROM rentals 
             WHERE video_id = @VideoId 
             AND returned_at IS NULL";
@@ -115,7 +115,7 @@ public class RentalRepository : IRentalRepository
 
         return rowsAffected > 0;
     }
-
+    
     // New method for confirming payment
     public bool ConfirmPayment(Guid rentalId, string transactionId)
     {

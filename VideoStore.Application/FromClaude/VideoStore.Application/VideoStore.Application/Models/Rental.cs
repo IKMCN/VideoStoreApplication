@@ -1,4 +1,4 @@
-﻿namespace VideoStore.Application.Models;
+namespace VideoStore.Application.Models;
 
 public class Rental
 {
@@ -9,12 +9,11 @@ public class Rental
     public DateTime DueDate { get; set; }
     public DateTime? ReturnedAt { get; set; }  // Nullable - null means not returned
     public decimal LateFee { get; set; }
-
+    
     // Payment tracking fields
     public string? PaymentTransactionId { get; set; }  // Transaction ID from Banking API
     public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Pending;
     public decimal RentalAmount { get; set; }  // Amount to be paid for the rental
-    public string? BankAccountNumber { get; set; }  // Bank account to check for payment
 }
 
 public enum PaymentStatus

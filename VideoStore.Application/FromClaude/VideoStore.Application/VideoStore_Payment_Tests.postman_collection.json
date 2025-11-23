@@ -1,0 +1,359 @@
+{
+	"info": {
+		"name": "VideoStore Payment Integration Tests",
+		"description": "Test collection for VideoStore-Banking payment integration",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Setup - Create Customer",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Customer created\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"var jsonData = pm.response.json();",
+							"pm.environment.set(\"customerId\", jsonData.id);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"phoneNumber\": \"555-0123\"\n}"
+				},
+				"url": {
+					"raw": "{{videoStoreUrl}}/api/customers",
+					"host": [
+						"{{videoStoreUrl}}"
+					],
+					"path": [
+						"api",
+						"customers"
+					]
+				}
+			}
+		},
+		{
+			"name": "Setup - Create Video",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Video created\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"var jsonData = pm.response.json();",
+							"pm.environment.set(\"videoId\", jsonData.id);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"title\": \"The Matrix\",\n  \"genre\": \"Sci-Fi\",\n  \"releaseYear\": 1999,\n  \"copiesAvailable\": 5\n}"
+				},
+				"url": {
+					"raw": "{{videoStoreUrl}}/api/videos",
+					"host": [
+						"{{videoStoreUrl}}"
+					],
+					"path": [
+						"api",
+						"videos"
+					]
+				}
+			}
+		},
+		{
+			"name": "1. Create Rental (Pending Payment)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Rental created with Pending status\", function () {",
+							"    pm.response.to.have.status(200);",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.paymentStatus).to.eql(\"Pending\");",
+							"    pm.expect(jsonData.rentalAmount).to.eql(5.00);",
+							"});",
+							"",
+							"var jsonData = pm.response.json();",
+							"pm.environment.set(\"rentalId\", jsonData.id);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"videoId\": \"{{videoId}}\",\n  \"rentalAmount\": 5.00,\n  \"paymentStatus\": \"Pending\"\n}"
+				},
+				"url": {
+					"raw": "{{videoStoreUrl}}/api/rentals",
+					"host": [
+						"{{videoStoreUrl}}"
+					],
+					"path": [
+						"api",
+						"rentals"
+					]
+				}
+			}
+		},
+		{
+			"name": "2. Create Transaction in Banking API",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Transaction created\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"var jsonData = pm.response.json();",
+							"pm.environment.set(\"transactionId\", jsonData.id);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{bankingApiToken}}",
+						"description": "Add your Banking API JWT token here"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"accountId\": \"test-account-id\",\n  \"type\": \"Debit\",\n  \"amount\": 5.00,\n  \"description\": \"VideoStore Rental Payment\"\n}"
+				},
+				"url": {
+					"raw": "{{bankingApiUrl}}/api/transactions",
+					"host": [
+						"{{bankingApiUrl}}"
+					],
+					"path": [
+						"api",
+						"transactions"
+					]
+				},
+				"description": "NOTE: You may need to adjust this based on your Banking API structure"
+			}
+		},
+		{
+			"name": "3. Confirm Payment",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Payment confirmed successfully\", function () {",
+							"    pm.response.to.have.status(200);",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.message).to.include(\"confirmed successfully\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"transactionId\": \"{{transactionId}}\"\n}"
+				},
+				"url": {
+					"raw": "{{videoStoreUrl}}/api/rentals/{{rentalId}}/confirm-payment",
+					"host": [
+						"{{videoStoreUrl}}"
+					],
+					"path": [
+						"api",
+						"rentals",
+						"{{rentalId}}",
+						"confirm-payment"
+					]
+				}
+			}
+		},
+		{
+			"name": "4. Verify Rental is Paid",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Rental status is Paid\", function () {",
+							"    pm.response.to.have.status(200);",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.paymentStatus).to.eql(\"Paid\");",
+							"    pm.expect(jsonData.paymentTransactionId).to.not.be.null;",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{videoStoreUrl}}/api/rentals/{{rentalId}}",
+					"host": [
+						"{{videoStoreUrl}}"
+					],
+					"path": [
+						"api",
+						"rentals",
+						"{{rentalId}}"
+					]
+				}
+			}
+		},
+		{
+			"name": "Error Test - Invalid Transaction ID",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Returns 400 for invalid transaction\", function () {",
+							"    pm.response.to.have.status(400);",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.message).to.include(\"not found\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"transactionId\": \"invalid-transaction-id-12345\"\n}"
+				},
+				"url": {
+					"raw": "{{videoStoreUrl}}/api/rentals/{{rentalId}}/confirm-payment",
+					"host": [
+						"{{videoStoreUrl}}"
+					],
+					"path": [
+						"api",
+						"rentals",
+						"{{rentalId}}",
+						"confirm-payment"
+					]
+				}
+			}
+		},
+		{
+			"name": "Error Test - Rental Not Found",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Returns 404 for non-existent rental\", function () {",
+							"    pm.response.to.have.status(404);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"transactionId\": \"{{transactionId}}\"\n}"
+				},
+				"url": {
+					"raw": "{{videoStoreUrl}}/api/rentals/00000000-0000-0000-0000-000000000000/confirm-payment",
+					"host": [
+						"{{videoStoreUrl}}"
+					],
+					"path": [
+						"api",
+						"rentals",
+						"00000000-0000-0000-0000-000000000000",
+						"confirm-payment"
+					]
+				}
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "videoStoreUrl",
+			"value": "http://localhost:5000",
+			"type": "string"
+		},
+		{
+			"key": "bankingApiUrl",
+			"value": "http://localhost:5001",
+			"type": "string"
+		}
+	]
+}

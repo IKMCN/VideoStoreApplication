@@ -15,12 +15,12 @@ public class CustomerRepository : ICustomerRepository
 
     public void AddCustomer(Customer customer)
     {
-
+        
         using var connection = new NpgsqlConnection(_connectionString);
 
         var sql = @"
-            INSERT INTO customers (id, name, email, bank_account_number)
-            VALUES (@Id, @Name, @Email, @BankAccountNumber)";
+            INSERT INTO customers (id, name, email)
+            VALUES (@Id, @Name, @Email)";
 
         connection.Execute(sql, customer);
     }
@@ -29,7 +29,7 @@ public class CustomerRepository : ICustomerRepository
     {
         using var connection = new NpgsqlConnection(_connectionString);
 
-        var sql = "SELECT id, name, email, bank_account_number FROM customers";
+        var sql = "SELECT id, name, email FROM customers";
 
         return connection.Query<Customer>(sql).ToList();
     }
@@ -38,7 +38,7 @@ public class CustomerRepository : ICustomerRepository
     {
         using var connection = new NpgsqlConnection(_connectionString);
 
-        var sql = "SELECT id, name, email, bank_account_number FROM customers WHERE id = @Id";
+        var sql = "SELECT id, name, email FROM customers WHERE id = @Id";
 
         return connection.QuerySingleOrDefault<Customer>(sql, new { Id = id });
     }
@@ -60,15 +60,14 @@ public class CustomerRepository : ICustomerRepository
 
         var sql = @"
             UPDATE customers
-            SET name = @Name, email = @Email, bank_account_number = @BankAccountNumber
+            SET name = @Name, email = @Email
             WHERE id = @Id";
 
         var rowsAffected = connection.Execute(sql, new
         {
             Id = id,
             updatedCustomer.Name,
-            updatedCustomer.Email,
-            updatedCustomer.BankAccountNumber
+            updatedCustomer.Email
         });
 
         return rowsAffected > 0;

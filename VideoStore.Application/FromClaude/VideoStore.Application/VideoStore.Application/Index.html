@@ -1,0 +1,441 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Store</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        input, select, button {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        select {
+            min-width: 200px;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+            button:hover {
+                background-color: #0056b3;
+            }
+
+        .list {
+            margin-top: 20px;
+        }
+
+        .item {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .delete-btn {
+            background-color: #dc3545;
+            padding: 5px 10px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+
+            .delete-btn:hover {
+                background-color: #c82333;
+            }
+
+        .return-btn {
+            background-color: #28a745;
+            padding: 5px 10px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+
+            .return-btn:hover {
+                background-color: #218838;
+            }
+
+        .rented {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+
+        .overdue {
+            background-color: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+
+        .returned {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+
+        .status {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 3px;
+            margin-left: 10px;
+        }
+
+            .status.available {
+                background-color: #d4edda;
+                color: #155724;
+            }
+
+            .status.rented {
+                background-color: #fff3cd;
+                color: #856404;
+            }
+    </style>
+</head>
+<body>
+    <h1>🎬 Video Store</h1>
+
+    <!-- CUSTOMERS SECTION -->
+    <div class="section">
+        <h2>Customers</h2>
+        <div>
+            <input type="text" id="customerName" placeholder="Name" />
+            <input type="email" id="customerEmail" placeholder="Email" />
+            <button onclick="addCustomer()">Add Customer</button>
+            <button onclick="loadCustomers()">Refresh</button>
+        </div>
+        <div id="customerList" class="list"></div>
+    </div>
+
+    <!-- VIDEOS SECTION -->
+    <div class="section">
+        <h2>Videos</h2>
+        <div>
+            <input type="text" id="videoTitle" placeholder="Title" />
+            <input type="number" id="videoYear" placeholder="Year" />
+            <input type="text" id="videoGenres" placeholder="Genres (comma-separated)" />
+            <button onclick="addVideo()">Add Video</button>
+            <button onclick="loadVideos()">Refresh</button>
+        </div>
+        <div id="videoList" class="list"></div>
+    </div>
+
+    <!-- RENTALS SECTION -->
+    <div class="section">
+        <h2>Rentals</h2>
+        <div>
+            <select id="rentalCustomer">
+                <option value="">Select Customer</option>
+            </select>
+            <select id="rentalVideo">
+                <option value="">Select Video</option>
+            </select>
+            <button onclick="rentVideo()">Rent Video</button>
+            <button onclick="loadRentals()">Refresh</button>
+        </div>
+        <div id="rentalList" class="list"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5167/api';
+
+        let customers = [];
+        let videos = [];
+        let rentals = [];
+
+        // CUSTOMERS
+        async function addCustomer() {
+            const name = document.getElementById('customerName').value;
+            const email = document.getElementById('customerEmail').value;
+
+            if (!name || !email) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            const response = await fetch(`${API_URL}/customers`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email })
+            });
+
+            if (response.ok) {
+                document.getElementById('customerName').value = '';
+                document.getElementById('customerEmail').value = '';
+                loadCustomers();
+            } else {
+                alert('Error adding customer');
+            }
+        }
+
+        async function loadCustomers() {
+            const response = await fetch(`${API_URL}/customers`);
+            customers = await response.json();
+
+            // Update customer list
+            const listDiv = document.getElementById('customerList');
+            listDiv.innerHTML = customers.map(c => `
+                        <div class="item">
+                            <span><strong>${c.name}</strong> - ${c.email}</span>
+                            <div>
+                                <button onclick="viewCustomerRentals('${c.id}')">View Rentals</button>
+                                <button class="delete-btn" onclick="deleteCustomer('${c.id}')">Delete</button>
+                            </div>
+                        </div>
+                    `).join('');
+
+            // Update rental dropdown
+            const selectEl = document.getElementById('rentalCustomer');
+            selectEl.innerHTML = '<option value="">Select Customer</option>' +
+                customers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        }
+
+        async function deleteCustomer(id) {
+            if (!confirm('Delete this customer?')) return;
+
+            const response = await fetch(`${API_URL}/customers/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                loadCustomers();
+            } else {
+                alert('Error deleting customer');
+            }
+        }
+
+        async function viewCustomerRentals(customerId) {
+            const response = await fetch(`${API_URL}/rentals/customer/${customerId}`);
+            const customerRentals = await response.json();
+
+            const customer = customers.find(c => c.id === customerId);
+
+            if (customerRentals.length === 0) {
+                alert(`${customer.name} has no active rentals`);
+            } else {
+                const rentalInfo = customerRentals.map(r => {
+                    const video = videos.find(v => v.id === r.videoId);
+                    const dueDate = new Date(r.dueDate).toLocaleDateString();
+                    return `• ${video?.title || 'Unknown'} (Due: ${dueDate})`;
+                }).join('\n');
+
+                alert(`${customer.name}'s Active Rentals:\n\n${rentalInfo}`);
+            }
+        }
+
+        // VIDEOS
+        async function addVideo() {
+            const title = document.getElementById('videoTitle').value;
+            const yearOfRelease = parseInt(document.getElementById('videoYear').value);
+            const genresInput = document.getElementById('videoGenres').value;
+            const genres = genresInput.split(',').map(g => g.trim()).filter(g => g);
+
+            if (!title || !yearOfRelease) {
+                alert('Please fill in title and year');
+                return;
+            }
+
+            const response = await fetch(`${API_URL}/videos`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, yearOfRelease, genres })
+            });
+
+            if (response.ok) {
+                document.getElementById('videoTitle').value = '';
+                document.getElementById('videoYear').value = '';
+                document.getElementById('videoGenres').value = '';
+                loadVideos();
+            } else {
+                alert('Error adding video');
+            }
+        }
+
+        async function loadVideos() {
+            const response = await fetch(`${API_URL}/videos`);
+            videos = await response.json();
+
+            // Get all rentals to check availability
+            const rentalsResponse = await fetch(`${API_URL}/rentals`);
+            rentals = await rentalsResponse.json();
+
+            const listDiv = document.getElementById('videoList');
+            listDiv.innerHTML = videos.map(v => {
+                const activeRental = rentals.find(r => r.videoId === v.id && r.returnedAt === null);
+                const isRented = !!activeRental;
+
+                return `
+                            <div class="item">
+                                <span>
+                                    <strong>${v.title}</strong> (${v.yearOfRelease})
+                                    ${v.genres.length > 0 ? `- ${v.genres.join(', ')}` : ''}
+                                    <span class="status ${isRented ? 'rented' : 'available'}">
+                                        ${isRented ? 'Rented Out' : 'Available'}
+                                    </span>
+                                </span>
+                                <button class="delete-btn" onclick="deleteVideo('${v.id}')">Delete</button>
+                            </div>
+                        `;
+            }).join('');
+
+            // Update rental dropdown - only show available videos
+            const selectEl = document.getElementById('rentalVideo');
+            const availableVideos = videos.filter(v => {
+                return !rentals.find(r => r.videoId === v.id && r.returnedAt === null);
+            });
+
+            selectEl.innerHTML = '<option value="">Select Video</option>' +
+                availableVideos.map(v => `<option value="${v.id}">${v.title}</option>`).join('');
+        }
+
+        async function deleteVideo(id) {
+            if (!confirm('Delete this video?')) return;
+
+            const response = await fetch(`${API_URL}/videos/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                loadVideos();
+            } else {
+                alert('Error deleting video');
+            }
+        }
+
+        // RENTALS
+        async function rentVideo() {
+            const customerId = document.getElementById('rentalCustomer').value;
+            const videoId = document.getElementById('rentalVideo').value;
+
+            if (!customerId || !videoId) {
+                alert('Please select both customer and video');
+                return;
+            }
+
+            const response = await fetch(`${API_URL}/rentals`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ customerId, videoId })
+            });
+
+            if (response.ok) {
+                document.getElementById('rentalCustomer').value = '';
+                document.getElementById('rentalVideo').value = '';
+                loadRentals();
+                loadVideos(); // Refresh to update availability
+            } else {
+                const error = await response.json();
+                alert(error.message || 'Error renting video');
+            }
+        }
+
+        async function loadRentals() {
+            const response = await fetch(`${API_URL}/rentals`);
+            rentals = await response.json();
+
+            const listDiv = document.getElementById('rentalList');
+
+            if (rentals.length === 0) {
+                listDiv.innerHTML = '<p>No rentals yet</p>';
+                return;
+            }
+
+            listDiv.innerHTML = rentals.map(r => {
+                const customer = customers.find(c => c.id === r.customerId);
+                const video = videos.find(v => v.id === r.videoId);
+                const rentedDate = new Date(r.rentedAt).toLocaleDateString();
+                const dueDate = new Date(r.dueDate).toLocaleDateString();
+                const isReturned = r.returnedAt !== null;
+                const isOverdue = !isReturned && new Date(r.dueDate) < new Date();
+
+                let statusClass = isReturned ? 'returned' : (isOverdue ? 'overdue' : 'rented');
+                let statusText = isReturned ? 'Returned' : (isOverdue ? 'OVERDUE' : 'Active');
+
+                return `
+                            <div class="item ${statusClass}">
+                                <span>
+                                    <strong>${customer?.name || 'Unknown'}</strong> rented
+                                    <strong>${video?.title || 'Unknown'}</strong>
+                                    <br>
+                                    <small>Rented: ${rentedDate} | Due: ${dueDate} | Status: ${statusText}</small>
+                                    ${r.lateFee > 0 ? `<br><small>Late Fee: $${r.lateFee.toFixed(2)}</small>` : ''}
+                                </span>
+                                <div>
+                                    ${!isReturned ? `<button class="return-btn" onclick="returnVideo('${r.id}')">Return</button>` : ''}
+                                    <button class="delete-btn" onclick="deleteRental('${r.id}')">Delete</button>
+                                </div>
+                            </div>
+                        `;
+            }).join('');
+        }
+
+        async function returnVideo(rentalId) {
+            const lateFeeInput = prompt('Enter late fee (0 if not late):');
+            if (lateFeeInput === null) return; // Cancelled
+
+            const lateFee = parseFloat(lateFeeInput) || 0;
+
+            const response = await fetch(`${API_URL}/rentals/${rentalId}/return`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lateFee })
+            });
+
+            if (response.ok) {
+                loadRentals();
+                loadVideos(); // Refresh to update availability
+            } else {
+                alert('Error returning video');
+            }
+        }
+
+        async function deleteRental(id) {
+            if (!confirm('Delete this rental record?')) return;
+
+            const response = await fetch(`${API_URL}/rentals/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                loadRentals();
+                loadVideos(); // Refresh to update availability
+            } else {
+                alert('Error deleting rental');
+            }
+        }
+
+        // Load all data on page load
+        async function initializePage() {
+            await loadCustomers();
+            await loadVideos();
+            await loadRentals();
+        }
+
+        initializePage();
+    </script>
+</body>
+</html>

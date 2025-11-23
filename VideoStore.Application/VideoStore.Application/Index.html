@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Store</title>
+    <title>Video Store - Integrated Card Reader</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -43,9 +43,9 @@
             cursor: pointer;
         }
 
-            button:hover {
-                background-color: #0056b3;
-            }
+        button:hover {
+            background-color: #0056b3;
+        }
 
         .list {
             margin-top: 20px;
@@ -68,9 +68,9 @@
             margin-left: 5px;
         }
 
-            .delete-btn:hover {
-                background-color: #c82333;
-            }
+        .delete-btn:hover {
+            background-color: #c82333;
+        }
 
         .return-btn {
             background-color: #28a745;
@@ -79,23 +79,48 @@
             margin-left: 5px;
         }
 
-            .return-btn:hover {
-                background-color: #218838;
-            }
+        .return-btn:hover {
+            background-color: #218838;
+        }
 
-        .rented {
+        .card-reader-btn {
+            background-color: #17a2b8;
+            color: white;
+            padding: 5px 10px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+
+        .card-reader-btn:hover {
+            background-color: #138496;
+        }
+
+        .payment-pending {
             background-color: #fff3cd;
             border-left: 4px solid #ffc107;
         }
 
-        .overdue {
-            background-color: #f8d7da;
-            border-left: 4px solid #dc3545;
+        .payment-paid {
+            background-color: #d1ecf1;
+            border-left: 4px solid #17a2b8;
         }
 
-        .returned {
-            background-color: #d4edda;
-            border-left: 4px solid #28a745;
+        .payment-status {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 3px;
+            margin-left: 10px;
+            font-weight: bold;
+        }
+
+        .payment-status.pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .payment-status.paid {
+            background-color: #d1ecf1;
+            color: #0c5460;
         }
 
         .status {
@@ -105,28 +130,246 @@
             margin-left: 10px;
         }
 
-            .status.available {
-                background-color: #d4edda;
-                color: #155724;
-            }
+        .status.available {
+            background-color: #d4edda;
+            color: #155724;
+        }
 
-            .status.rented {
-                background-color: #fff3cd;
-                color: #856404;
+        .status.rented {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        /* Card Reader Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            animation: fadeIn 0.3s;
+            overflow: auto; /* Make background scrollable */
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            padding: 0;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 450px;
+            max-height: 90vh;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+            animation: slideDown 0.4s;
+            overflow-y: auto; /* Make content scrollable */
+            cursor: move; /* Show draggable cursor */
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translate(-50%, -60%);
+                opacity: 0;
             }
+            to {
+                transform: translate(-50%, -50%);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            background: rgba(255,255,255,0.1);
+            padding: 25px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            cursor: move; /* Show draggable cursor on header */
+        }
+
+        .modal-header h2 {
+            color: white;
+            font-size: 24px;
+            margin-bottom: 10px;
+            user-select: none; /* Prevent text selection while dragging */
+        }
+
+        .modal-body {
+            padding: 30px;
+            background: white;
+        }
+
+        .card-visual {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-visual::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        }
+
+        .card-chip {
+            width: 50px;
+            height: 40px;
+            background: linear-gradient(135deg, #f4d03f 0%, #c5a028 100%);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .amount-display {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 25px;
+            border: 2px dashed #667eea;
+        }
+
+        .amount-display .label {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .amount-display .amount {
+            color: #667eea;
+            font-size: 36px;
+            font-weight: bold;
+        }
+
+        .modal-footer {
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            background: #f8f9fa;
+        }
+
+        .status-message {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            display: none;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-processing {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .close {
+            color: white;
+            float: right;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+            transition: all 0.3s;
+        }
+
+        .close:hover {
+            transform: rotate(90deg);
+        }
+
+        .rental-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .rental-info p {
+            margin: 5px 0;
+            color: #666;
+        }
+
+        .rental-info strong {
+            color: #333;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
     </style>
 </head>
 <body>
-    <h1>🎬 Video Store</h1>
+    <h1>🎬 Video Store - Card Reader POS</h1>
 
     <!-- CUSTOMERS SECTION -->
     <div class="section">
         <h2>Customers</h2>
         <div>
-            <input type="text" id="customerName" placeholder="Name" />
-            <input type="email" id="customerEmail" placeholder="Email" />
+            <input type="text" id="customerName" placeholder="Customer Name">
+            <input type="text" id="customerEmail" placeholder="Email">
+            <input type="text" id="customerPhone" placeholder="Phone">
+            <input type="text" id="bankAccountNumber" placeholder="Bank Account Number">
             <button onclick="addCustomer()">Add Customer</button>
-            <button onclick="loadCustomers()">Refresh</button>
         </div>
         <div id="customerList" class="list"></div>
     </div>
@@ -135,57 +378,335 @@
     <div class="section">
         <h2>Videos</h2>
         <div>
-            <input type="text" id="videoTitle" placeholder="Title" />
-            <input type="number" id="videoYear" placeholder="Year" />
-            <input type="text" id="videoGenres" placeholder="Genres (comma-separated)" />
+            <input type="text" id="videoTitle" placeholder="Title">
+            <input type="number" id="videoYear" placeholder="Year">
+            <input type="text" id="videoGenres" placeholder="Genres (comma separated)">
             <button onclick="addVideo()">Add Video</button>
-            <button onclick="loadVideos()">Refresh</button>
         </div>
         <div id="videoList" class="list"></div>
     </div>
 
     <!-- RENTALS SECTION -->
     <div class="section">
-        <h2>Rentals</h2>
+        <h2>Create Rental</h2>
         <div>
-            <select id="rentalCustomer">
-                <option value="">Select Customer</option>
-            </select>
-            <select id="rentalVideo">
-                <option value="">Select Video</option>
-            </select>
+            <select id="rentalCustomer"></select>
+            <select id="rentalVideo"></select>
+            <input type="number" id="rentalAmount" placeholder="Amount" value="5.00" step="0.01">
             <button onclick="rentVideo()">Rent Video</button>
-            <button onclick="loadRentals()">Refresh</button>
         </div>
         <div id="rentalList" class="list"></div>
     </div>
 
+    <!-- CARD READER MODAL -->
+    <div id="cardReaderModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close" onclick="closeCardReader()">&times;</span>
+                <h2>💳 Card Payment</h2>
+                <p style="color: rgba(255,255,255,0.9); margin-top: 10px;">Insert or swipe card</p>
+            </div>
+            
+            <div class="modal-body">
+                <div class="rental-info">
+                    <p><strong>Customer:</strong> <span id="modalCustomerName">-</span></p>
+                    <p><strong>Video:</strong> <span id="modalVideoTitle">-</span></p>
+                    <p><strong>Rental ID:</strong> <span id="modalRentalId">-</span></p>
+                </div>
+
+                <div class="card-visual">
+                    <div class="card-chip"></div>
+                    <div style="position: relative; z-index: 1;">
+                        <p style="font-size: 20px; letter-spacing: 2px; margin-bottom: 15px;">
+                            <span id="cardNumberDisplay">•••• •••• •••• ••••</span>
+                        </p>
+                        <p style="font-size: 14px; opacity: 0.9;">DEBIT CARD</p>
+                    </div>
+                </div>
+
+                <div class="amount-display">
+                    <div class="label">Amount to Charge</div>
+                    <div class="amount">$<span id="modalAmount">0.00</span></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="cardNumber">Card Number</label>
+                    <input type="text" 
+                           id="cardNumber" 
+                           placeholder="Enter card number" 
+                           maxlength="16"
+                           oninput="updateCardDisplay(this.value)">
+                </div>
+
+                <div class="form-group">
+                    <label for="cardPin">PIN</label>
+                    <input type="password" 
+                           id="cardPin" 
+                           placeholder="Enter 4-digit PIN" 
+                           maxlength="4">
+                </div>
+
+                <div id="statusMessage" class="status-message"></div>
+
+                <input type="hidden" id="currentRentalId">
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-danger" onclick="closeCardReader()">Cancel</button>
+                <button onclick="processCardPayment()">💳 Charge Card</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_URL = 'http://localhost:5167/api';
+        const BANKING_API_URL = 'http://localhost:5002/api';
 
         let customers = [];
         let videos = [];
         let rentals = [];
 
+        // DRAG FUNCTIONALITY FOR MODAL
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+        let xOffset = 0;
+        let yOffset = 0;
+
+        function initializeDragging() {
+            const modal = document.getElementById('cardReaderModal');
+            const modalContent = modal.querySelector('.modal-content');
+            const header = modal.querySelector('.modal-header');
+
+            header.addEventListener('mousedown', dragStart);
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', dragEnd);
+
+            // Touch events for mobile
+            header.addEventListener('touchstart', dragStart);
+            document.addEventListener('touchmove', drag);
+            document.addEventListener('touchend', dragEnd);
+        }
+
+        function dragStart(e) {
+            const modal = document.getElementById('cardReaderModal');
+            const modalContent = modal.querySelector('.modal-content');
+            
+            if (e.type === "touchstart") {
+                initialX = e.touches[0].clientX - xOffset;
+                initialY = e.touches[0].clientY - yOffset;
+            } else {
+                initialX = e.clientX - xOffset;
+                initialY = e.clientY - yOffset;
+            }
+
+            if (e.target === modal.querySelector('.modal-header') || 
+                modal.querySelector('.modal-header').contains(e.target)) {
+                isDragging = true;
+                modalContent.style.transition = 'none'; // Disable animation during drag
+            }
+        }
+
+        function drag(e) {
+            if (isDragging) {
+                e.preventDefault();
+                
+                const modal = document.getElementById('cardReaderModal');
+                const modalContent = modal.querySelector('.modal-content');
+
+                if (e.type === "touchmove") {
+                    currentX = e.touches[0].clientX - initialX;
+                    currentY = e.touches[0].clientY - initialY;
+                } else {
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+                }
+
+                xOffset = currentX;
+                yOffset = currentY;
+
+                setTranslate(currentX, currentY, modalContent);
+            }
+        }
+
+        function dragEnd(e) {
+            if (isDragging) {
+                const modal = document.getElementById('cardReaderModal');
+                const modalContent = modal.querySelector('.modal-content');
+                
+                initialX = currentX;
+                initialY = currentY;
+                isDragging = false;
+            }
+        }
+
+        function setTranslate(xPos, yPos, el) {
+            el.style.transform = `translate(calc(-50% + ${xPos}px), calc(-50% + ${yPos}px))`;
+        }
+
+        // CARD READER FUNCTIONS
+        function openCardReader(rental) {
+            const customer = customers.find(c => c.id === rental.customerId);
+            const video = videos.find(v => v.id === rental.videoId);
+
+            document.getElementById('modalCustomerName').textContent = customer?.name || 'Unknown';
+            document.getElementById('modalVideoTitle').textContent = video?.title || 'Unknown';
+            document.getElementById('modalRentalId').textContent = rental.id;
+            document.getElementById('modalAmount').textContent = rental.rentalAmount.toFixed(2);
+            document.getElementById('currentRentalId').value = rental.id;
+            
+            document.getElementById('cardNumber').value = '';
+            document.getElementById('cardPin').value = '';
+            document.getElementById('cardNumberDisplay').textContent = '•••• •••• •••• ••••';
+            hideStatus();
+
+            // Reset modal position to center
+            const modal = document.getElementById('cardReaderModal');
+            const modalContent = modal.querySelector('.modal-content');
+            xOffset = 0;
+            yOffset = 0;
+            modalContent.style.transform = 'translate(-50%, -50%)';
+            modalContent.style.transition = ''; // Re-enable animation
+
+            document.getElementById('cardReaderModal').style.display = 'block';
+        }
+
+        function closeCardReader() {
+            document.getElementById('cardReaderModal').style.display = 'none';
+        }
+
+        function updateCardDisplay(cardNumber) {
+            const display = document.getElementById('cardNumberDisplay');
+            if (cardNumber.length === 0) {
+                display.textContent = '•••• •••• •••• ••••';
+            } else {
+                const formatted = cardNumber.padEnd(16, '•').match(/.{1,4}/g).join(' ');
+                display.textContent = formatted;
+            }
+        }
+
+        async function processCardPayment() {
+            const cardNumber = document.getElementById('cardNumber').value.trim();
+            const pin = document.getElementById('cardPin').value.trim();
+            const amount = parseFloat(document.getElementById('modalAmount').textContent);
+            const rentalId = document.getElementById('currentRentalId').value;
+
+            // Validation
+            if (!cardNumber || cardNumber.length < 10) {
+                showStatus('Please enter a valid card number', 'error');
+                return;
+            }
+
+            if (!pin || pin.length !== 4) {
+                showStatus('Please enter a 4-digit PIN', 'error');
+                return;
+            }
+
+            showStatus('Processing payment...', 'processing');
+
+            try {
+                // STEP 1: Charge the card via Banking API
+                console.log('Charging card:', cardNumber, 'Amount:', amount);
+                
+                const atmResponse = await fetch(`${BANKING_API_URL}/atm/authorize`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        cardNumber: cardNumber,
+                        pin: pin,
+                        amount: amount,
+                        terminalId: 'VIDEOSTORE_POS'
+                    })
+                });
+
+                const atmResult = await atmResponse.json();
+                console.log('ATM Response:', atmResult);
+
+                if (!atmResponse.ok || atmResult.status !== 'approved') {
+                    showStatus('❌ Payment declined: ' + (atmResult.message || 'Unknown error'), 'error');
+                    return;
+                }
+
+                // STEP 2: We have the transaction ID! Confirm payment immediately
+                if (atmResult.transactionId) {
+                    console.log('✅ Card charged successfully. Transaction ID:', atmResult.transactionId);
+                    
+                    const confirmResponse = await fetch(
+                        `${API_URL}/rentals/${rentalId}/confirm-payment`,
+                        {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                transactionId: atmResult.transactionId
+                            })
+                        }
+                    );
+
+                    if (confirmResponse.ok) {
+                        showStatus(`✅ Payment successful! Transaction ID: ${atmResult.transactionId}`, 'success');
+                        
+                        setTimeout(() => {
+                            closeCardReader();
+                            loadRentals(); // Refresh the rentals list
+                        }, 2000);
+                    } else {
+                        const errorText = await confirmResponse.text();
+                        showStatus(`⚠️ Card charged but confirmation failed: ${errorText}. Transaction ID: ${atmResult.transactionId}`, 'error');
+                    }
+                } else {
+                    showStatus('❌ Payment response missing transaction ID', 'error');
+                }
+
+            } catch (error) {
+                console.error('Payment error:', error);
+                showStatus('❌ Payment processing error: ' + error.message, 'error');
+            }
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status-message status-' + type;
+            statusDiv.style.display = 'block';
+        }
+
+        function hideStatus() {
+            document.getElementById('statusMessage').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('cardReaderModal');
+            if (event.target === modal) {
+                closeCardReader();
+            }
+        }
+
         // CUSTOMERS
         async function addCustomer() {
             const name = document.getElementById('customerName').value;
             const email = document.getElementById('customerEmail').value;
+            const phone = document.getElementById('customerPhone').value;
+            const bankAccountNumber = document.getElementById('bankAccountNumber').value;
 
-            if (!name || !email) {
-                alert('Please fill in all fields');
+            if (!name) {
+                alert('Please enter customer name');
                 return;
             }
 
             const response = await fetch(`${API_URL}/customers`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email })
+                body: JSON.stringify({ name, email, phone, bankAccountNumber })
             });
 
             if (response.ok) {
                 document.getElementById('customerName').value = '';
                 document.getElementById('customerEmail').value = '';
+                document.getElementById('customerPhone').value = '';
+                document.getElementById('bankAccountNumber').value = '';
                 loadCustomers();
             } else {
                 alert('Error adding customer');
@@ -196,19 +717,18 @@
             const response = await fetch(`${API_URL}/customers`);
             customers = await response.json();
 
-            // Update customer list
             const listDiv = document.getElementById('customerList');
             listDiv.innerHTML = customers.map(c => `
-                        <div class="item">
-                            <span><strong>${c.name}</strong> - ${c.email}</span>
-                            <div>
-                                <button onclick="viewCustomerRentals('${c.id}')">View Rentals</button>
-                                <button class="delete-btn" onclick="deleteCustomer('${c.id}')">Delete</button>
-                            </div>
-                        </div>
-                    `).join('');
+                <div class="item">
+                    <span>
+                        <strong>${c.name}</strong>
+                        ${c.email ? ` - ${c.email}` : ''}
+                        ${c.bankAccountNumber ? ` | Bank: ${c.bankAccountNumber}` : ''}
+                    </span>
+                    <button class="delete-btn" onclick="deleteCustomer('${c.id}')">Delete</button>
+                </div>
+            `).join('');
 
-            // Update rental dropdown
             const selectEl = document.getElementById('rentalCustomer');
             selectEl.innerHTML = '<option value="">Select Customer</option>' +
                 customers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
@@ -225,25 +745,6 @@
                 loadCustomers();
             } else {
                 alert('Error deleting customer');
-            }
-        }
-
-        async function viewCustomerRentals(customerId) {
-            const response = await fetch(`${API_URL}/rentals/customer/${customerId}`);
-            const customerRentals = await response.json();
-
-            const customer = customers.find(c => c.id === customerId);
-
-            if (customerRentals.length === 0) {
-                alert(`${customer.name} has no active rentals`);
-            } else {
-                const rentalInfo = customerRentals.map(r => {
-                    const video = videos.find(v => v.id === r.videoId);
-                    const dueDate = new Date(r.dueDate).toLocaleDateString();
-                    return `• ${video?.title || 'Unknown'} (Due: ${dueDate})`;
-                }).join('\n');
-
-                alert(`${customer.name}'s Active Rentals:\n\n${rentalInfo}`);
             }
         }
 
@@ -279,7 +780,6 @@
             const response = await fetch(`${API_URL}/videos`);
             videos = await response.json();
 
-            // Get all rentals to check availability
             const rentalsResponse = await fetch(`${API_URL}/rentals`);
             rentals = await rentalsResponse.json();
 
@@ -289,20 +789,19 @@
                 const isRented = !!activeRental;
 
                 return `
-                            <div class="item">
-                                <span>
-                                    <strong>${v.title}</strong> (${v.yearOfRelease})
-                                    ${v.genres.length > 0 ? `- ${v.genres.join(', ')}` : ''}
-                                    <span class="status ${isRented ? 'rented' : 'available'}">
-                                        ${isRented ? 'Rented Out' : 'Available'}
-                                    </span>
-                                </span>
-                                <button class="delete-btn" onclick="deleteVideo('${v.id}')">Delete</button>
-                            </div>
-                        `;
+                    <div class="item">
+                        <span>
+                            <strong>${v.title}</strong> (${v.yearOfRelease})
+                            ${v.genres.length > 0 ? `- ${v.genres.join(', ')}` : ''}
+                            <span class="status ${isRented ? 'rented' : 'available'}">
+                                ${isRented ? 'Rented Out' : 'Available'}
+                            </span>
+                        </span>
+                        <button class="delete-btn" onclick="deleteVideo('${v.id}')">Delete</button>
+                    </div>
+                `;
             }).join('');
 
-            // Update rental dropdown - only show available videos
             const selectEl = document.getElementById('rentalVideo');
             const availableVideos = videos.filter(v => {
                 return !rentals.find(r => r.videoId === v.id && r.returnedAt === null);
@@ -330,6 +829,7 @@
         async function rentVideo() {
             const customerId = document.getElementById('rentalCustomer').value;
             const videoId = document.getElementById('rentalVideo').value;
+            const rentalAmount = parseFloat(document.getElementById('rentalAmount').value) || 5.00;
 
             if (!customerId || !videoId) {
                 alert('Please select both customer and video');
@@ -339,14 +839,20 @@
             const response = await fetch(`${API_URL}/rentals`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ customerId, videoId })
+                body: JSON.stringify({ 
+                    customerId, 
+                    videoId,
+                    rentalAmount: rentalAmount,
+                    paymentStatus: 0
+                })
             });
 
             if (response.ok) {
                 document.getElementById('rentalCustomer').value = '';
                 document.getElementById('rentalVideo').value = '';
+                alert(`✅ Rental created!\n\nUse the "💳 Process Payment" button to charge the customer's card.`);
                 loadRentals();
-                loadVideos(); // Refresh to update availability
+                loadVideos();
             } else {
                 const error = await response.json();
                 alert(error.message || 'Error renting video');
@@ -371,31 +877,39 @@
                 const dueDate = new Date(r.dueDate).toLocaleDateString();
                 const isReturned = r.returnedAt !== null;
                 const isOverdue = !isReturned && new Date(r.dueDate) < new Date();
+                
+                const isPaid = r.paymentStatus === 1;
+                const paymentStatusText = isPaid ? 'PAID ✅' : 'PENDING PAYMENT';
+                const paymentStatusClass = isPaid ? 'paid' : 'pending';
 
-                let statusClass = isReturned ? 'returned' : (isOverdue ? 'overdue' : 'rented');
-                let statusText = isReturned ? 'Returned' : (isOverdue ? 'OVERDUE' : 'Active');
+                let statusClass = isReturned ? 'returned' : (isPaid ? 'payment-paid' : 'payment-pending');
 
                 return `
-                            <div class="item ${statusClass}">
-                                <span>
-                                    <strong>${customer?.name || 'Unknown'}</strong> rented
-                                    <strong>${video?.title || 'Unknown'}</strong>
-                                    <br>
-                                    <small>Rented: ${rentedDate} | Due: ${dueDate} | Status: ${statusText}</small>
-                                    ${r.lateFee > 0 ? `<br><small>Late Fee: $${r.lateFee.toFixed(2)}</small>` : ''}
-                                </span>
-                                <div>
-                                    ${!isReturned ? `<button class="return-btn" onclick="returnVideo('${r.id}')">Return</button>` : ''}
-                                    <button class="delete-btn" onclick="deleteRental('${r.id}')">Delete</button>
-                                </div>
-                            </div>
-                        `;
+                    <div class="item ${statusClass}">
+                        <span>
+                            <strong>${customer?.name || 'Unknown'}</strong> rented
+                            <strong>${video?.title || 'Unknown'}</strong>
+                            <span class="payment-status ${paymentStatusClass}">${paymentStatusText}</span>
+                            <br>
+                            <small>
+                                Rented: ${rentedDate} | Due: ${dueDate}
+                                ${r.rentalAmount ? ` | Amount: $${r.rentalAmount.toFixed(2)}` : ''}
+                            </small>
+                            ${r.paymentTransactionId ? `<br><small>✅ Transaction ID: ${r.paymentTransactionId}</small>` : ''}
+                        </span>
+                        <div>
+                            ${!isPaid && !isReturned ? `<button class="card-reader-btn" onclick='openCardReader(${JSON.stringify(r)})'>💳 Process Payment</button>` : ''}
+                            ${!isReturned && isPaid ? `<button class="return-btn" onclick="returnVideo('${r.id}')">Return</button>` : ''}
+                            <button class="delete-btn" onclick="deleteRental('${r.id}')">Delete</button>
+                        </div>
+                    </div>
+                `;
             }).join('');
         }
 
         async function returnVideo(rentalId) {
             const lateFeeInput = prompt('Enter late fee (0 if not late):');
-            if (lateFeeInput === null) return; // Cancelled
+            if (lateFeeInput === null) return;
 
             const lateFee = parseFloat(lateFeeInput) || 0;
 
@@ -407,7 +921,7 @@
 
             if (response.ok) {
                 loadRentals();
-                loadVideos(); // Refresh to update availability
+                loadVideos();
             } else {
                 alert('Error returning video');
             }
@@ -422,7 +936,7 @@
 
             if (response.ok) {
                 loadRentals();
-                loadVideos(); // Refresh to update availability
+                loadVideos();
             } else {
                 alert('Error deleting rental');
             }
@@ -433,6 +947,7 @@
             await loadCustomers();
             await loadVideos();
             await loadRentals();
+            initializeDragging(); // Initialize drag functionality
         }
 
         initializePage();
